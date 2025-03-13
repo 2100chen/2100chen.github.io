@@ -1,0 +1,153 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>海光平台 StarPU 部署和应用文档</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h1><a id="_StarPU__0"></a>海光平台 StarPU 部署和应用文档</h1>
+<hr>
+<h2><a id="_3"></a>目录</h2>
+<ul>
+<li><a href="#1-%E6%A6%82%E8%BF%B0">1 概述</a></li>
+<li><a href="#2-%E8%B6%85%E7%AE%97%E5%B9%B3%E5%8F%B0%E7%8E%AF%E5%A2%83%E9%85%8D%E7%BD%AE">2 超算平台环境配置</a></li>
+<li><a href="#3-starpu-%E5%AE%9A%E5%88%B6%E5%8C%96%E7%BC%96%E8%AF%91">3 StarPU 定制化编译</a></li>
+<li><a href="#4-%E7%AE%97%E4%BE%8B%E6%89%A7%E8%A1%8C%E6%AD%A5%E9%AA%A4">4 算例执行步骤</a></li>
+<li><a href="#5-%E9%99%84%E5%BD%95">5 附录</a></li>
+</ul>
+<hr>
+<h2><a id="1__11"></a>1 概述</h2>
+<p>本文档描述在海光超算平台上完成以下任务的操作流程：</p>
+<ol>
+<li><strong>定制版 StarPU 编译</strong>：支持 CPU/DCU 混合计算。</li>
+<li><strong>算例执行</strong>：在 CPU 32 核和单 DCU 上运行验证。</li>
+<li><strong>源码交付</strong>：单 DCU 版源码和 2~3 个小算例。</li>
+</ol>
+<hr>
+<h2><a id="2__20"></a>2 超算平台环境配置</h2>
+<h3><a id="21__21"></a>2.1 登录与容器启动</h3>
+<pre><code class="prism language-bash"><span class="token comment"># 登录超算平台</span>
+平台地址：https://www.scnet.cn/
+账号：
+密码：
+<span class="token comment"># 操作步骤</span>
+<span class="token number">1</span>. 进入控制台<span class="token punctuation">\</span>
+   容器服务<span class="token punctuation">\</span> 
+   启动 <span class="token string">"zem_correct"</span> 容器<span class="token punctuation">\</span>
+   打开终端
+<span class="token number">2</span>. <span class="token punctuation">(</span>切换用户<span class="token punctuation">)</span>输入：
+   <span class="token function">su</span> zem
+<span class="token number">3</span>.显示如下图即可：
+</code></pre>
+<h2><a id="3_StarPU__36"></a>3 StarPU 定制化编译</h2>
+<h3><a id="31__37"></a>3.1 源码编译步骤</h3>
+<pre><code class="prism language-bash"><span class="token comment"># 编译：在~/tee/starpu-starpu-1.4.6/build目录中</span>
+<span class="token function">make</span> <span class="token parameter variable">-j16</span>
+<span class="token function">sudo</span> <span class="token function">make</span> <span class="token function">install</span><span class="token comment">#注意：在曙光机器中这一句需要改成如下命令：</span>
+<span class="token function">sudo</span> <span class="token assign-left variable"><span class="token environment constant">PATH</span></span><span class="token operator">=</span>/opt/conda/bin:<span class="token environment constant">$PATH</span> <span class="token function">make</span> <span class="token function">install</span> 
+</code></pre>
+<hr>
+<h2><a id="4__45"></a>4 算例执行步骤</h2>
+<pre><code class="prism language-bash"><span class="token comment">#进入 ~/tee/starpu-starpu-1.4.6/build/examples</span>
+<span class="token comment">#进入某个示例文件夹里运行可执行文件：</span>
+<span class="token assign-left variable">STARPU_SCHED</span><span class="token operator">=</span>dmdas（调度策略，默认lws） 
+<span class="token assign-left variable">STARPU_NCPU</span><span class="token operator">=</span><span class="token number">0</span>（cpu数量）
+<span class="token assign-left variable">STARPU_NOPENCL</span><span class="token operator">=</span><span class="token number">0</span>（opencl数量） 
+<span class="token assign-left variable">STARPU_NCUDA</span><span class="token operator">=</span><span class="token number">1</span>（gpu数量）
+./~
+</code></pre>
+<h3><a id="stencil_56"></a>运行示例程序（以stencil为例子）</h3>
+<pre><code class="prism language-bash"><span class="token comment">#若出现libcudart.so.11.0缺失错误，参考5.1中的问题一</span>
+<span class="token builtin class-name">cd</span> ~/tee/starpu-starpu-1.4.6/build/examples/stencil
+</code></pre>
+<h4><a id="CPU_32__61"></a>CPU 32 核执行</h4>
+<pre><code class="prism language-bash"><span class="token assign-left variable">STARPU_SCHED</span><span class="token operator">=</span>dmdas <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NCPU</span><span class="token operator">=</span><span class="token number">32</span> <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NOPENCL</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NCUDA</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+./stencil <span class="token parameter variable">-sizex</span> <span class="token number">500</span> <span class="token parameter variable">-sizey</span> <span class="token number">500</span> <span class="token parameter variable">-sizez</span> <span class="token number">500</span>
+</code></pre>
+<h4><a id="_DCU__70"></a>单 DCU 执行</h4>
+<pre><code class="prism language-bash"><span class="token assign-left variable">STARPU_SCHED</span><span class="token operator">=</span>dmdas <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NCPU</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NOPENCL</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NCUDA</span><span class="token operator">=</span><span class="token number">1</span> <span class="token punctuation">\</span>
+./stencil <span class="token parameter variable">-sizex</span> <span class="token number">500</span> <span class="token parameter variable">-sizey</span> <span class="token number">500</span> <span class="token parameter variable">-sizez</span> <span class="token number">500</span>
+</code></pre>
+<h3><a id="dcu_78"></a>其他运行示例命令(均以单dcu为例)</h3>
+<h4><a id="sgemm_79"></a>sgemm：</h4>
+<pre><code class="prism language-bash"><span class="token builtin class-name">cd</span> ~/tee/starpu-starpu-1.4.6/build/examples/mult
+<span class="token assign-left variable">STARPU_SCHED</span><span class="token operator">=</span>dmdas <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NCPU</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NOPENCL</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NCUDA</span><span class="token operator">=</span><span class="token number">1</span>
+./sgemm <span class="token parameter variable">-x</span> <span class="token number">3840</span> <span class="token parameter variable">-y</span> <span class="token number">3840</span> <span class="token parameter variable">-z</span> <span class="token number">3840</span> 
+</code></pre>
+<h4><a id="dgemm_88"></a>dgemm：</h4>
+<pre><code class="prism language-bash"><span class="token builtin class-name">cd</span> ~/tee/starpu-starpu-1.4.6/build/examples/mult
+<span class="token assign-left variable">STARPU_SCHED</span><span class="token operator">=</span>dmdas <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NCPU</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NOPENCL</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NCUDA</span><span class="token operator">=</span><span class="token number">1</span>
+./dgemm <span class="token parameter variable">-x</span> <span class="token number">3840</span> <span class="token parameter variable">-y</span> <span class="token number">3840</span> <span class="token parameter variable">-z</span> <span class="token number">3840</span> 
+</code></pre>
+<h4><a id="lu_example_double_97"></a>lu_example_double</h4>
+<pre><code class="prism language-bash"><span class="token builtin class-name">cd</span> ~/tee/starpu-starpu-1.4.6/build/examples/lu
+<span class="token assign-left variable">STARPU_SCHED</span><span class="token operator">=</span>dmdas <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NCPU</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NOPENCL</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+<span class="token assign-left variable">STARPU_NCUDA</span><span class="token operator">=</span><span class="token number">1</span>
+./lu_example_double
+</code></pre>
+<hr>
+<h2><a id="5__109"></a>5 附录</h2>
+<h3><a id="51__110"></a>5.1 常见问题解决</h3>
+<pre><code class="prism language-bash"><span class="token comment">#错误一  如果报以下错误：</span>
+error <span class="token keyword">while</span> loading shared libraries: libcudart.so.11.0: cannot <span class="token function">open</span> shared object file: No such <span class="token function">file</span> or directory。
+<span class="token comment">#输入以下命令即可</span>
+<span class="token builtin class-name">cd</span> /opt/dtk-24.04.1/cuda
+<span class="token builtin class-name">source</span> env.sh 
+nvcc <span class="token parameter variable">--version</span>
+
+<span class="token comment"># 错误二  mpi.h 未找到</span>
+<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> libopenmpi-dev
+
+<span class="token comment"># 错误三  pkg-config 检测失败</span>
+<span class="token builtin class-name">export</span> <span class="token assign-left variable">PKG_CONFIG_PATH</span><span class="token operator">=</span>/path/to/your/lib/pkgconfig:<span class="token variable">$PKG_CONFIG_PATH</span>
+</code></pre>
+<h3><a id="52__125"></a>5.2 术语表</h3>
+
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DCU</td>
+<td>海光深度学习加速卡</td>
+</tr>
+<tr>
+<td>LWS</td>
+<td>默认局部工作窃取调度策略</td>
+</tr>
+<tr>
+<td>DMDAS</td>
+<td>数据感知动态调度策略</td>
+</tr>
+</tbody>
+</table><h3><a id="53__132"></a>5.3 参考链接</h3>
+<ul>
+<li><a href="https://starpu.gitlabpages.inria.fr/">StarPU 官方文档</a></li>
+<li><a href="https://www.hygon.cn/">海光 DCU 开发指南</a></li>
+</ul>
+</div>
+</body>
+
+</html>
